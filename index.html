@@ -388,6 +388,7 @@
                 <button class="btn secondary" onclick="skipQuestion()">⏭️ Passer</button>
                 <button class="btn debug" onclick="debugGameState()">🔍 Debug</button>
                 <button class="btn debug" onclick="forceNextQuestion()">🚀 Forcer suite</button>
+                <button class="btn debug" onclick="emergencyReset()" style="background: #e74c3c;">🆘 Reset</button>
             </div>
         </div>
 
@@ -878,6 +879,9 @@
             console.log('🖥️ Affichage question côté hôte');
             showScreen('hostQuestionScreen');
             
+            // NETTOYER tous les anciens listeners avant d'en créer de nouveaux
+            cleanupQuestionListeners();
+            
             // Récupérer et afficher la question
             database.ref(`games/${currentGameId}/currentQuestion`).once('value', (snapshot) => {
                 const question = snapshot.val();
@@ -892,17 +896,21 @@
                         const btn = document.createElement('div');
                         btn.className = 'option-btn';
                         btn.textContent = option;
-                        // Enlever cette ligne qui affichait la réponse en vert :
-                        // if (index === question.correct) {
-                        //     btn.classList.add('correct');
-                        // }
                         optionsGrid.appendChild(btn);
                     });
                 }
             });
 
+            // Variable pour éviter les appels multiples
+            let isProcessingAnswers = false;
+            
             // Fonction pour compter les réponses
             function updateAnswerCount() {
+                if (isProcessingAnswers) {
+                    console.log('⚠️ Traitement déjà en cours, ignore...');
+                    return;
+                }
+                
                 database.ref(`games/${currentGameId}/players`).once('value', (snapshot) => {
                     const players = snapshot.val() || {};
                     database.ref(`games/${currentGameId}/currentQuestionIndex`).once('value', (indexSnapshot) => {
@@ -919,20 +927,33 @@
                         });
                         
                         const answerCountElement = document.getElementById('hostAnswersCount');
-                        answerCountElement.textContent = `${answeredPlayers}/${totalPlayers} joueurs ont répondu`;
+                        if (answerCountElement) {
+                            answerCountElement.textContent = `${answeredPlayers}/${totalPlayers} joueurs ont répondu`;
+                        }
                         
                         console.log(`📊 Réponses: ${answeredPlayers}/${totalPlayers}`);
                         
-                        // Auto-passer si tous ont répondu
-                        if (answeredPlayers === totalPlayers && totalPlayers > 0) {
+                        // Auto-passer si tous ont répondu ET qu'on est encore sur l'écran question
+                        const currentScreen = document.querySelector('.screen.active');
+                        if (answeredPlayers === totalPlayers && totalPlayers > 0 && 
+                            currentScreen && currentScreen.id === 'hostQuestionScreen' && 
+                            !isProcessingAnswers) {
+                            
                             console.log('✅ Tous les joueurs ont répondu, passage automatique dans 2 secondes');
+                            isProcessingAnswers = true;
+                            
                             setTimeout(() => {
-                                if (timer) {
-                                    clearInterval(timer);
-                                    timer = null;
+                                // Vérifier qu'on est toujours sur l'écran question
+                                const stillOnQuestionScreen = document.querySelector('.screen.active')?.id === 'hostQuestionScreen';
+                                if (stillOnQuestionScreen) {
+                                    if (timer) {
+                                        clearInterval(timer);
+                                        timer = null;
+                                    }
+                                    cleanupQuestionListeners(); // Nettoyer AVANT de passer
+                                    skipQuestion();
                                 }
-                                skipQuestion();
-                            }, 2000); // Augmenté à 2 secondes pour laisser le temps de voir
+                            }, 2000);
                         }
                     });
                 });
@@ -940,10 +961,25 @@
             
             // Écouter les changements de réponses EN TEMPS RÉEL
             const answerListener = database.ref(`games/${currentGameId}/players`).on('value', updateAnswerCount);
-            questionListeners.push(answerListener);
+            questionListeners.push({
+                ref: database.ref(`games/${currentGameId}/players`),
+                listener: answerListener
+            });
             
             // Compter initialement
             updateAnswerCount();
+        }
+        
+        // Fonction pour nettoyer les listeners de questions
+        function cleanupQuestionListeners() {
+            console.log('🧹 Nettoyage des listeners de questions...');
+            questionListeners.forEach(item => {
+                if (item && item.ref && item.listener) {
+                    item.ref.off('value', item.listener);
+                }
+            });
+            questionListeners = [];
+            console.log('✅ Listeners nettoyés');
         }
 
         // Afficher la question côté joueur
@@ -1004,99 +1040,101 @@
 
         // Passer à la question suivante ou aux résultats
         async function skipQuestion() {
-            console.log('⏭️ Passage à la question suivante...');
+            console.log('⏭️ === DÉBUT SKIPQUESTION ===');
+            
+            // ÉTAPE 1: Nettoyer immédiatement les listeners pour éviter la boucle
+            cleanupQuestionListeners();
             
             if (timer) {
                 clearInterval(timer);
                 timer = null;
+                console.log('⏰ Timer arrêté');
             }
             
             try {
+                console.log('📊 Changement état vers "results"...');
                 await database.ref(`games/${currentGameId}/gameState`).set('results');
+                console.log('✅ État changé vers "results"');
+                
+                console.log('🧮 Calcul des scores...');
                 await calculateScores();
-                console.log('✅ Scores calculés, affichage des résultats');
+                console.log('✅ Scores calculés avec succès');
+                
+                console.log('📊 Affichage des résultats...');
+                // Forcer l'affichage des résultats côté hôte
+                showHostResults();
+                
             } catch (error) {
-                console.error('❌ Erreur lors du passage à la question suivante:', error);
+                console.error('❌ ERREUR dans skipQuestion:', error);
+                console.error('❌ Stack trace:', error.stack);
+                
+                // En cas d'erreur, essayer de forcer l'affichage des résultats
+                showError('Erreur lors du passage aux résultats: ' + error.message);
+                setTimeout(() => {
+                    try {
+                        showHostResults();
+                    } catch (e) {
+                        console.error('❌ Erreur même en forçant les résultats:', e);
+                    }
+                }, 1000);
             }
+            
+            console.log('⏭️ === FIN SKIPQUESTION ===');
         }
 
-        // Calculer les scores
+        // Calculer les scores avec gestion d'erreur robuste
         async function calculateScores() {
-            console.log('🧮 Calcul des scores...');
-            const snapshot = await database.ref(`games/${currentGameId}/players`).once('value');
-            const players = snapshot.val() || {};
-            const currentIndex = await getCurrentQuestionIndex();
-            const correctAnswer = questions[currentIndex].correct;
+            console.log('🧮 === DÉBUT CALCULATESCORES ===');
             
-            console.log(`✅ Bonne réponse: ${correctAnswer}`);
-            
-            Object.keys(players).forEach(playerId => {
-                const player = players[playerId];
-                const answer = player.answers && player.answers[currentIndex];
+            try {
+                console.log('📥 Récupération des joueurs...');
+                const playersSnapshot = await database.ref(`games/${currentGameId}/players`).once('value');
+                const players = playersSnapshot.val() || {};
+                console.log('👥 Joueurs trouvés:', Object.keys(players).length);
                 
-                if (answer === correctAnswer) {
-                    player.score = (player.score || 0) + 10;
-                    console.log(`✅ ${player.name} a bien répondu (+10 points)`);
-                } else {
-                    console.log(`❌ ${player.name} a mal répondu`);
+                console.log('📊 Récupération index question...');
+                const currentIndex = await getCurrentQuestionIndex();
+                console.log('📝 Index question actuelle:', currentIndex);
+                
+                if (!questions[currentIndex]) {
+                    throw new Error(`Question ${currentIndex} introuvable dans le tableau`);
                 }
-            });
-
-            await database.ref(`games/${currentGameId}/players`).set(players);
-            console.log('💾 Scores sauvegardés');
+                
+                const correctAnswer = questions[currentIndex].correct;
+                console.log('✅ Bonne réponse:', correctAnswer);
+                
+                const updatedPlayers = {};
+                
+                Object.entries(players).forEach(([playerId, player]) => {
+                    const playerAnswer = player.answers && player.answers[currentIndex];
+                    const oldScore = player.score || 0;
+                    
+                    console.log(`👤 ${player.name}: réponse=${playerAnswer}, bonne=${correctAnswer}`);
+                    
+                    if (playerAnswer === correctAnswer) {
+                        player.score = oldScore + 10;
+                        console.log(`✅ ${player.name}: ${oldScore} → ${player.score} (+10 points)`);
+                    } else {
+                        console.log(`❌ ${player.name}: score reste ${oldScore}`);
+                    }
+                    
+                    updatedPlayers[playerId] = player;
+                });
+                
+                console.log('💾 Sauvegarde des scores...');
+                await database.ref(`games/${currentGameId}/players`).set(updatedPlayers);
+                console.log('✅ Scores sauvegardés avec succès');
+                
+            } catch (error) {
+                console.error('❌ ERREUR dans calculateScores:', error);
+                console.error('❌ Stack trace:', error.stack);
+                throw error; // Re-lancer l'erreur pour que skipQuestion la gère
+            }
+            
+            console.log('🧮 === FIN CALCULATESCORES ===');
         }
 
-        // Afficher les résultats côté hôte
-        async function showHostResults() {
-            console.log('📊 Affichage résultats côté hôte');
-            showScreen('hostResultsScreen');
-            
-            const currentIndex = await getCurrentQuestionIndex();
-            const question = questions[currentIndex];
-            const correctAnswer = question.options[question.correct];
-            
-            document.getElementById('hostCorrectAnswer').innerHTML = 
-                `<h3>✅ Bonne réponse : ${correctAnswer}</h3>`;
-            
-            // Afficher le classement
-            const snapshot = await database.ref(`games/${currentGameId}/players`).once('value');
-            const players = snapshot.val() || {};
-            const sortedPlayers = Object.values(players).sort((a, b) => (b.score || 0) - (a.score || 0));
-            
-            const scoreBoard = document.getElementById('hostScoreBoard');
-            scoreBoard.innerHTML = '<h3>🏆 Classement actuel :</h3>';
-            
-            sortedPlayers.forEach((player, index) => {
-                const scoreItem = document.createElement('div');
-                scoreItem.className = 'score-item';
-                scoreItem.innerHTML = `
-                    <span>${index + 1}. ${player.name}</span>
-                    <span>${player.score || 0} pts</span>
-                `;
-                scoreBoard.appendChild(scoreItem);
-            });
-            
-            // Timer pour la question suivante
-            let nextTimer = 5;
-            const timerElement = document.getElementById('hostNextTimer');
-            const nextQuestionInterval = setInterval(() => {
-                if (timerElement) {
-                    timerElement.textContent = nextTimer;
-                }
-                nextTimer--;
-                
-                console.log(`⏱️ Question suivante dans ${nextTimer + 1} secondes`);
-                
-                if (nextTimer < 0) {
-                    clearInterval(nextQuestionInterval);
-                    console.log('⏭️ Timer fini, passage à la question suivante');
-                    nextQuestion();
-                }
-            }, 1000);
-            
-            // Sauvegarder l'interval pour pouvoir l'arrêter si nécessaire
-            window.currentResultTimer = nextQuestionInterval;
-        }
+
 
         // Afficher les résultats côté joueur
         async function showPlayerResults() {
@@ -1333,12 +1371,14 @@
             }, 5000);
         }
 
-        // Fonctions de debug
+        // Fonctions de debug et d'urgence
         function debugGameState() {
             console.log('🔍 === DEBUG ÉTAT DU JEU ===');
             console.log('Game ID:', currentGameId);
             console.log('Is Host:', isHost);
             console.log('Player ID:', currentPlayerId);
+            console.log('Questions chargées:', questions.length);
+            console.log('Timer actif:', timer !== null);
             
             if (currentGameId) {
                 database.ref(`games/${currentGameId}`).once('value', (snapshot) => {
@@ -1347,14 +1387,138 @@
                     
                     if (gameData && gameData.players) {
                         Object.entries(gameData.players).forEach(([playerId, player]) => {
-                            console.log(`👤 Joueur ${playerId}:`, player);
-                            if (player.answers) {
-                                console.log(`📝 Réponses:`, player.answers);
-                            }
+                            console.log(`👤 Joueur ${playerId} (${player.name}):`, {
+                                score: player.score || 0,
+                                answers: player.answers || {}
+                            });
                         });
                     }
+                    
+                    console.log('🎮 État actuel:', gameData?.gameState);
+                    console.log('📝 Question actuelle:', gameData?.currentQuestionIndex);
                 });
             }
+            
+            // Afficher l'état des écrans
+            document.querySelectorAll('.screen').forEach(screen => {
+                if (screen.classList.contains('active')) {
+                    console.log('📺 Écran actif:', screen.id);
+                }
+            });
+        }
+
+        function emergencyReset() {
+            console.log('🆘 === RESET D\'URGENCE ===');
+            
+            const confirmReset = confirm('⚠️ ATTENTION ! Cela va forcer l\'affichage des résultats. Continuer ?');
+            if (!confirmReset) return;
+            
+            try {
+                // Arrêter tous les timers
+                if (timer) {
+                    clearInterval(timer);
+                    timer = null;
+                }
+                if (window.currentResultTimer) {
+                    clearInterval(window.currentResultTimer);
+                    window.currentResultTimer = null;
+                }
+                
+                console.log('🛑 Timers arrêtés');
+                
+                // Forcer l'affichage des résultats
+                showHostResults();
+                console.log('📊 Résultats forcés');
+                
+                showNotification('🆘 Reset effectué - Résultats affichés', 'warning');
+                
+            } catch (error) {
+                console.error('❌ Erreur pendant le reset:', error);
+                showNotification('❌ Erreur pendant le reset: ' + error.message, 'error');
+            }
+        }
+
+        // Version simplifiée et robuste de showHostResults
+        async function showHostResults() {
+            console.log('📊 === DÉBUT SHOWHOSTRESULTS ===');
+            
+            try {
+                showScreen('hostResultsScreen');
+                console.log('📺 Écran résultats affiché');
+                
+                const currentIndex = await getCurrentQuestionIndex();
+                console.log('📝 Index question:', currentIndex);
+                
+                if (!questions[currentIndex]) {
+                    throw new Error(`Question ${currentIndex} introuvable`);
+                }
+                
+                const question = questions[currentIndex];
+                const correctAnswer = question.options[question.correct];
+                
+                document.getElementById('hostCorrectAnswer').innerHTML = 
+                    `<h3>✅ Bonne réponse : ${correctAnswer}</h3>`;
+                console.log('✅ Bonne réponse affichée:', correctAnswer);
+                
+                // Récupérer et afficher le classement
+                const snapshot = await database.ref(`games/${currentGameId}/players`).once('value');
+                const players = snapshot.val() || {};
+                const sortedPlayers = Object.values(players).sort((a, b) => (b.score || 0) - (a.score || 0));
+                
+                const scoreBoard = document.getElementById('hostScoreBoard');
+                scoreBoard.innerHTML = '<h3>🏆 Classement actuel :</h3>';
+                
+                sortedPlayers.forEach((player, index) => {
+                    const scoreItem = document.createElement('div');
+                    scoreItem.className = 'score-item';
+                    scoreItem.innerHTML = `
+                        <span>${index + 1}. ${player.name}</span>
+                        <span>${player.score || 0} pts</span>
+                    `;
+                    scoreBoard.appendChild(scoreItem);
+                });
+                
+                console.log('🏆 Classement affiché');
+                
+                // Timer pour la question suivante
+                let nextTimer = 5;
+                const timerElement = document.getElementById('hostNextTimer');
+                
+                const nextQuestionInterval = setInterval(() => {
+                    if (timerElement) {
+                        timerElement.textContent = nextTimer;
+                    }
+                    nextTimer--;
+                    
+                    console.log(`⏱️ Question suivante dans ${nextTimer + 1} secondes`);
+                    
+                    if (nextTimer < 0) {
+                        clearInterval(nextQuestionInterval);
+                        window.currentResultTimer = null;
+                        console.log('⏭️ Timer fini, passage à la question suivante');
+                        nextQuestion();
+                    }
+                }, 1000);
+                
+                // Sauvegarder l'interval
+                window.currentResultTimer = nextQuestionInterval;
+                console.log('⏰ Timer des résultats démarré');
+                
+            } catch (error) {
+                console.error('❌ ERREUR dans showHostResults:', error);
+                console.error('❌ Stack trace:', error.stack);
+                
+                // Affichage d'erreur de base
+                showScreen('hostResultsScreen');
+                document.getElementById('hostCorrectAnswer').innerHTML = 
+                    `<h3 style="color: #e74c3c;">❌ Erreur: ${error.message}</h3>`;
+                document.getElementById('hostScoreBoard').innerHTML = 
+                    `<p>Erreur lors de l'affichage des scores</p>`;
+                
+                showNotification('❌ Erreur lors de l\'affichage des résultats', 'error');
+            }
+            
+            console.log('📊 === FIN SHOWHOSTRESULTS ===');
         }
 
         function forceNextQuestion() {
@@ -1399,27 +1563,31 @@
         }
 
         function cleanupGame() {
+            console.log('🧹 Nettoyage complet du jeu...');
+            
             if (currentGameId) {
                 database.ref(`games/${currentGameId}`).off();
             }
             
             // Nettoyer les listeners de questions
-            questionListeners.forEach(listener => {
-                if (listener) {
-                    database.ref(`games/${currentGameId}/players`).off('value', listener);
-                }
-            });
-            questionListeners = [];
+            cleanupQuestionListeners();
             
             if (timer) {
                 clearInterval(timer);
                 timer = null;
             }
             
+            if (window.currentResultTimer) {
+                clearInterval(window.currentResultTimer);
+                window.currentResultTimer = null;
+            }
+            
             currentGameId = null;
             currentPlayerId = null;
             isHost = false;
             questions = [];
+            
+            console.log('✅ Nettoyage terminé');
         }
 
         // Gestion des paramètres URL (pour le QR code)
