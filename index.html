@@ -404,7 +404,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
     
     <!-- QR Code Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 
     <script>
         // Configuration Firebase - REMPLACEZ PAR VOS PROPRES CLÉS
@@ -563,17 +563,32 @@
             return Math.random().toString(36).substr(2, 9);
         }
 
-        // Génération du QR Code
-        function generateQRCode() {
-            const gameUrl = `${window.location.origin}${window.location.pathname}?game=${currentGameId}`;
-            const qr = new QRious({
-                element: document.getElementById('qrcode'),
-                value: gameUrl,
-                size: 200,
-                background: 'white',
-                foreground: 'black'
-            });
-        }
+    // Génération du QR Code
+    function generateQRCode() {
+	const gameUrl = `${window.location.origin}${window.location.pathname}?game=${currentGameId}`;
+    
+    try {
+        // Créer le QR code avec qrcode-generator
+        const qr = qrcode(0, 'M');
+        qr.addData(gameUrl);
+        qr.make();
+        
+        // Créer l'élément image
+        const qrContainer = document.getElementById('qrcode');
+        qrContainer.innerHTML = qr.createImgTag(4, 8); // taille 4, marge 8
+        
+        console.log('✅ QR Code généré pour:', gameUrl);
+    } catch (error) {
+        console.error('❌ Erreur génération QR Code:', error);
+        // Fallback : afficher juste l'URL
+        document.getElementById('qrcode').innerHTML = `
+            <div style="padding: 20px; background: white; border-radius: 10px; color: #333;">
+                <p><strong>Lien de la partie :</strong></p>
+                <p style="word-break: break-all; font-family: monospace;">${gameUrl}</p>
+            </div>
+        `;
+    }
+}
 
         // Configuration des écouteurs pour l'hôte
         function setupHostListeners() {
