@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz des Capitales</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(45deg, #fff, #e0e0e0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            color: white;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin: 0.5rem;
+            font-weight: 600;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn.secondary {
+            background: linear-gradient(45deg, #74b9ff, #0984e3);
+        }
+
+        .btn.success {
+            background: linear-gradient(45deg, #00b894, #00a085);
+        }
+
+        .input-group {
+            margin: 1rem 0;
+        }
+
+        input[type="text"] {
+            padding: 1rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            width: 100%;
+            max-width: 300px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+
+        .qr-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            margin: 2rem 0;
+            display: inline-block;
+        }
+
+        .game-id {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ff6b6b;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            border: 2px dashed rgba(255, 255, 255, 0.5);
+        }
+
+        .players-list {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 1rem 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .player-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+
+        .question-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .question-text {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            font-weight: 600;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .option-btn {
+            padding: 1rem;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .option-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .option-btn.selected {
+            border-color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.3);
+        }
+
+        .option-btn.correct {
+            background: rgba(0, 184, 148, 0.8);
+            border-color: #00b894;
+        }
+
+        .option-btn.incorrect {
+            background: rgba(255, 107, 107, 0.8);
+            border-color: #ff6b6b;
+        }
+
+        .timer {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ff6b6b;
+            margin: 1rem 0;
+        }
+
+        .score-board {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .score-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+
+        .mobile-warning {
+            display: none;
+            background: rgba(255, 193, 7, 0.8);
+            color: #333;
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+                margin: 1rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .host-screen .mobile-warning {
+                display: block;
+            }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: rgba(231, 76, 60, 0.8);
+            color: white;
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+
+        .success {
+            background: rgba(39, 174, 96, 0.8);
+            color: white;
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌍 Quiz des Capitales</h1>
+
+        <!-- Écran d'accueil -->
+        <div id="homeScreen" class="screen active">
+            <p style="font-size: 1.2rem; margin-bottom: 2rem; opacity: 0.9;">
+                Testez vos connaissances géographiques avec vos amis !
+            </p>
+            <button class="btn" onclick="showCreateGame()">🎮 Créer une partie</button>
+            <button class="btn secondary" onclick="showJoinGame()">📱 Rejoindre une partie</button>
+        </div>
+
+        <!-- Écran de création de partie -->
+        <div id="createGameScreen" class="screen">
+            <h2>Créer une nouvelle partie</h2>
+            <div class="mobile-warning">
+                ⚠️ Pour une meilleure expérience, utilisez un ordinateur comme hôte et les téléphones pour jouer.
+            </div>
+            <button class="btn success" onclick="createGame()">
+                <span id="createGameText">🚀 Créer la partie</span>
+                <span id="createGameLoading" class="loading" style="display: none;"></span>
+            </button>
+            <button class="btn secondary" onclick="showHome()">↩️ Retour</button>
+        </div>
+
+        <!-- Écran de rejoindre une partie -->
+        <div id="joinGameScreen" class="screen">
+            <h2>Rejoindre une partie</h2>
+            <div class="input-group">
+                <input type="text" id="gameIdInput" placeholder="Code de la partie" maxlength="6" style="text-transform: uppercase;">
+                <div style="margin-top: 1rem;">
+                    <input type="text" id="playerNameInput" placeholder="Votre nom" maxlength="20">
+                </div>
+            </div>
+            <button class="btn success" onclick="joinGame()">
+                <span id="joinGameText">🎯 Rejoindre</span>
+                <span id="joinGameLoading" class="loading" style="display: none;"></span>
+            </button>
+            <button class="btn secondary" onclick="showHome()">↩️ Retour</button>
+            <div id="joinError" class="error" style="display: none;"></div>
+        </div>
+
+        <!-- Écran hôte - Attente des joueurs -->
+        <div id="hostWaitingScreen" class="screen">
+            <h2>🎮 Partie créée !</h2>
+            <div class="game-id">
+                Code de la partie : <span id="gameIdDisplay"></span>
+            </div>
+            <div class="qr-container">
+                <div id="qrcode"></div>
+            </div>
+            <p>Scannez le QR code ou entrez le code de la partie sur votre téléphone</p>
+            
+            <div class="players-list">
+                <h3>🏆 Joueurs connectés :</h3>
+                <div id="playersList">
+                    <p style="opacity: 0.7;">En attente des joueurs...</p>
+                </div>
+            </div>
+            
+            <button class="btn success" onclick="startGame()" id="startGameBtn" disabled>
+                ⚡ Commencer la partie
+            </button>
+            <button class="btn secondary" onclick="endGameSession()">🚪 Quitter</button>
+        </div>
+
+        <!-- Écran hôte - Question en cours -->
+        <div id="hostQuestionScreen" class="screen">
+            <div class="question-container">
+                <div class="timer" id="hostTimer">30</div>
+                <div class="question-text" id="hostQuestionText"></div>
+                <div class="options-grid" id="hostOptionsGrid"></div>
+            </div>
+            <div id="hostAnswersCount">En attente des réponses...</div>
+            <button class="btn secondary" onclick="skipQuestion()">⏭️ Passer</button>
+        </div>
+
+        <!-- Écran hôte - Résultats -->
+        <div id="hostResultsScreen" class="screen">
+            <h2>📊 Résultats de la question</h2>
+            <div id="hostCorrectAnswer"></div>
+            <div class="score-board" id="hostScoreBoard"></div>
+            <div id="hostNextQuestionInfo">Question suivante dans <span id="hostNextTimer">5</span> secondes...</div>
+        </div>
+
+        <!-- Écran hôte - Résultats finaux -->
+        <div id="hostFinalScreen" class="screen">
+            <h2>🏆 Classement final</h2>
+            <div class="score-board" id="hostFinalScoreBoard"></div>
+            <button class="btn success" onclick="createGame()">🔄 Nouvelle partie</button>
+            <button class="btn secondary" onclick="showHome()">🏠 Accueil</button>
+        </div>
+
+        <!-- Écran joueur - Attente -->
+        <div id="playerWaitingScreen" class="screen">
+            <h2>✅ Connecté !</h2>
+            <p>Vous êtes connecté à la partie <strong id="playerGameId"></strong></p>
+            <p>En attente du démarrage de la partie...</p>
+            <div class="loading"></div>
+        </div>
+
+        <!-- Écran joueur - Question -->
+        <div id="playerQuestionScreen" class="screen">
+            <div class="question-container">
+                <div class="timer" id="playerTimer">30</div>
+                <div class="question-text" id="playerQuestionText"></div>
+                <div class="options-grid" id="playerOptionsGrid"></div>
+            </div>
+            <div id="playerSelectedAnswer" style="display: none;">
+                ✅ Réponse envoyée ! En attente des autres joueurs...
+            </div>
+        </div>
+
+        <!-- Écran joueur - Résultats -->
+        <div id="playerResultsScreen" class="screen">
+            <h2>📊 Résultat</h2>
+            <div id="playerAnswerResult"></div>
+            <div id="playerCurrentScore"></div>
+            <div id="playerNextQuestionInfo">Question suivante dans <span id="playerNextTimer">5</span> secondes...</div>
+        </div>
+
+        <!-- Écran joueur - Résultats finaux -->
+        <div id="playerFinalScreen" class="screen">
+            <h2>🏁 Fin de la partie</h2>
+            <div id="playerFinalResult"></div>
+            <div class="score-board" id="playerFinalScoreBoard"></div>
+            <button class="btn secondary" onclick="showHome()">🏠 Nouvelle partie</button>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+    
+    <!-- QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+
+    <script>
+        // Configuration Firebase - REMPLACEZ PAR VOS PROPRES CLÉS
+        const firebaseConfig = {
+            apiKey: "demo-key",
+            authDomain: "quiz-demo.firebaseapp.com",
+            databaseURL: "https://quiz-demo-default-rtdb.firebaseio.com/",
+            projectId: "quiz-demo",
+            storageBucket: "quiz-demo.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "demo-app-id"
+        };
+
+        // Initialisation Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Variables globales
+        let quizManager = null;
+        let currentGameId = null;
+        let currentPlayerId = null;
+        let isHost = false;
+        let questions = [];
+        let timer = null;
+        let timeLeft = 30;
+
+        // Chargement des questions
+        async function loadQuestions() {
+            try {
+                const response = await fetch('./questions.json');
+                const data = await response.json();
+                questions = data.questions;
+                return questions;
+            } catch (error) {
+                console.error('Erreur lors du chargement des questions:', error);
+                showError('Erreur lors du chargement des questions');
+                return [];
+            }
+        }
+
+        // Navigation entre les écrans
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function showHome() {
+            showScreen('homeScreen');
+            cleanupGame();
+        }
+
+        function showCreateGame() {
+            showScreen('createGameScreen');
+        }
+
+        function showJoinGame() {
+            showScreen('joinGameScreen');
+        }
+
+        // Création d'une partie (hôte)
+        async function createGame() {
+            showLoading('createGameLoading', 'createGameText');
+            
+            try {
+                await loadQuestions();
+                if (questions.length === 0) {
+                    throw new Error('Aucune question trouvée');
+                }
+
+                currentGameId = generateGameId();
+                isHost = true;
+
+                const gameData = {
+                    id: currentGameId,
+                    players: {},
+                    currentQuestion: null,
+                    currentQuestionIndex: 0,
+                    gameState: 'waiting',
+                    questions: questions,
+                    createdAt: Date.now()
+                };
+
+                await database.ref(`games/${currentGameId}`).set(gameData);
+                
+                document.getElementById('gameIdDisplay').textContent = currentGameId;
+                generateQRCode();
+                setupHostListeners();
+                showScreen('hostWaitingScreen');
+                
+            } catch (error) {
+                console.error('Erreur lors de la création de la partie:', error);
+                showError('Erreur lors de la création de la partie');
+            } finally {
+                hideLoading('createGameLoading', 'createGameText');
+            }
+        }
+
+        // Rejoindre une partie (joueur)
+        async function joinGame() {
+            const gameId = document.getElementById('gameIdInput').value.trim().toUpperCase();
+            const playerName = document.getElementById('playerNameInput').value.trim();
+
+            if (!gameId || !playerName) {
+                showJoinError('Veuillez entrer le code de la partie et votre nom');
+                return;
+            }
+
+            showLoading('joinGameLoading', 'joinGameText');
+
+            try {
+                // Vérifier si la partie existe
+                const gameSnapshot = await database.ref(`games/${gameId}`).once('value');
+                if (!gameSnapshot.exists()) {
+                    throw new Error('Partie introuvable');
+                }
+
+                const gameData = gameSnapshot.val();
+                if (gameData.gameState !== 'waiting') {
+                    throw new Error('La partie a déjà commencé');
+                }
+
+                currentGameId = gameId;
+                currentPlayerId = generatePlayerId();
+                isHost = false;
+
+                const playerData = {
+                    id: currentPlayerId,
+                    name: playerName,
+                    score: 0,
+                    answers: {},
+                    joinedAt: Date.now()
+                };
+
+                await database.ref(`games/${gameId}/players/${currentPlayerId}`).set(playerData);
+                
+                document.getElementById('playerGameId').textContent = gameId;
+                setupPlayerListeners();
+                showScreen('playerWaitingScreen');
+                
+            } catch (error) {
+                console.error('Erreur lors de la connexion:', error);
+                showJoinError(error.message || 'Erreur lors de la connexion');
+            } finally {
+                hideLoading('joinGameLoading', 'joinGameText');
+            }
+        }
+
+        // Génération d'ID uniques
+        function generateGameId() {
+            return Math.random().toString(36).substr(2, 6).toUpperCase();
+        }
+
+        function generatePlayerId() {
+            return Math.random().toString(36).substr(2, 9);
+        }
+
+        // Génération du QR Code
+        function generateQRCode() {
+            const gameUrl = `${window.location.origin}${window.location.pathname}?game=${currentGameId}`;
+            const qr = new QRious({
+                element: document.getElementById('qrcode'),
+                value: gameUrl,
+                size: 200,
+                background: 'white',
+                foreground: 'black'
+            });
+        }
+
+        // Configuration des écouteurs pour l'hôte
+        function setupHostListeners() {
+            // Écouter les nouveaux joueurs
+            database.ref(`games/${currentGameId}/players`).on('value', (snapshot) => {
+                const players = snapshot.val() || {};
+                updatePlayersList(players);
+                
+                // Activer le bouton start si au moins un joueur
+                const startBtn = document.getElementById('startGameBtn');
+                if (Object.keys(players).length > 0) {
+                    startBtn.disabled = false;
+                    startBtn.textContent = `⚡ Commencer (${Object.keys(players).length} joueur${Object.keys(players).length > 1 ? 's' : ''})`;
+                } else {
+                    startBtn.disabled = true;
+                    startBtn.textContent = '⚡ Commencer la partie';
+                }
+            });
+        }
+
+        // Configuration des écouteurs pour les joueurs
+        function setupPlayerListeners() {
+            // Écouter les changements d'état du jeu
+            database.ref(`games/${currentGameId}/gameState`).on('value', (snapshot) => {
+                const gameState = snapshot.val();
+                handleGameStateChange(gameState);
+            });
+
+            // Écouter la question actuelle
+            database.ref(`games/${currentGameId}/currentQuestion`).on('value', (snapshot) => {
+                const question = snapshot.val();
+                if (question && !isHost) {
+                    displayPlayerQuestion(question);
+                }
+            });
+
+            // Écouter l'index de la question actuelle
+            database.ref(`games/${currentGameId}/currentQuestionIndex`).on('value', (snapshot) => {
+                const index = snapshot.val();
+                if (index !== null && !isHost) {
+                    currentQuestionIndex = index;
+                }
+            });
+        }
+
+        // Gestion des changements d'état du jeu
+        function handleGameStateChange(gameState) {
+            if (isHost) {
+                switch (gameState) {
+                    case 'question':
+                        showHostQuestion();
+                        break;
+                    case 'results':
+                        showHostResults();
+                        break;
+                    case 'finished':
+                        showHostFinalResults();
+                        break;
+                }
+            } else {
+                switch (gameState) {
+                    case 'waiting':
+                        showScreen('playerWaitingScreen');
+                        break;
+                    case 'question':
+                        showScreen('playerQuestionScreen');
+                        break;
+                    case 'results':
+                        showPlayerResults();
+                        break;
+                    case 'finished':
+                        showPlayerFinalResults();
+                        break;
+                }
+            }
+        }
+
+        // Démarrer la partie (hôte)
+        async function startGame() {
+            try {
+                await database.ref(`games/${currentGameId}/gameState`).set('question');
+                await database.ref(`games/${currentGameId}/currentQuestionIndex`).set(0);
+                await showNextQuestion();
+            } catch (error) {
+                console.error('Erreur lors du démarrage:', error);
+                showError('Erreur lors du démarrage de la partie');
+            }
+        }
+
+        // Afficher la question suivante (hôte)
+        async function showNextQuestion() {
+            const questionIndex = await database.ref(`games/${currentGameId}/currentQuestionIndex`).once('value');
+            const currentIndex = questionIndex.val() || 0;
+
+            if (currentIndex >= questions.length) {
+                await database.ref(`games/${currentGameId}/gameState`).set('finished');
+                return;
+            }
+
+            const question = questions[currentIndex];
+            await database.ref(`games/${currentGameId}/currentQuestion`).set(question);
+            
+            showHostQuestion();
+            startTimer();
+        }
+
+        // Afficher la question côté hôte
+        function showHostQuestion() {
+            showScreen('hostQuestionScreen');
+            
+            database.ref(`games/${currentGameId}/currentQuestion`).once('value', (snapshot) => {
+                const question = snapshot.val();
+                if (question) {
+                    document.getElementById('hostQuestionText').textContent = question.question;
+                    
+                    const optionsGrid = document.getElementById('hostOptionsGrid');
+                    optionsGrid.innerHTML = '';
+                    
+                    question.options.forEach((option, index) => {
+                        const btn = document.createElement('div');
+                        btn.className = 'option-btn';
+                        btn.textContent = option;
+                        if (index === question.correct) {
+                            btn.classList.add('correct');
+                        }
+                        optionsGrid.appendChild(btn);
+                    });
+                }
+            });
+
+            // Compter les réponses
+            database.ref(`games/${currentGameId}/players`).on('value', (snapshot) => {
+                const players = snapshot.val() || {};
+                const currentIndex = getCurrentQuestionIndex();
+                let answeredCount = 0;
+                
+                Object.values(players).forEach(player => {
+                    if (player.answers && player.answers[currentIndex] !== undefined) {
+                        answeredCount++;
+                    }
+                });
+                
+                document.getElementById('hostAnswersCount').textContent = 
+                    `${answeredCount}/${Object.keys(players).length} joueurs ont répondu`;
+            });
+        }
+
+        // Afficher la question côté joueur
+        function displayPlayerQuestion(question) {
+            document.getElementById('playerQuestionText').textContent = question.question;
+            
+            const optionsGrid = document.getElementById('playerOptionsGrid');
+            optionsGrid.innerHTML = '';
+            
+            question.options.forEach((option, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = option;
+                btn.onclick = () => selectAnswer(index);
+                optionsGrid.appendChild(btn);
+            });
+
+            document.getElementById('playerSelectedAnswer').style.display = 'none';
+        }
+
+        // Sélectionner une réponse (joueur)
+        async function selectAnswer(answerIndex) {
+            try {
+                const currentIndex = await getCurrentQuestionIndex();
+                await database.ref(`games/${currentGameId}/players/${currentPlayerId}/answers/${currentIndex}`).set(answerIndex);
+                
+                // Marquer la réponse comme sélectionnée
+                document.querySelectorAll('#playerOptionsGrid .option-btn').forEach((btn, index) => {
+                    btn.classList.remove('selected');
+                    if (index === answerIndex) {
+                        btn.classList.add('selected');
+                    }
+                    btn.disabled = true;
+                });
+                
+                document.getElementById('playerSelectedAnswer').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Erreur lors de l\'envoi de la réponse:', error);
+            }
+        }
+
+        // Passer à la question suivante ou aux résultats
+        async function skipQuestion() {
+            clearInterval(timer);
+            await database.ref(`games/${currentGameId}/gameState`).set('results');
+            await calculateScores();
+        }
+
+        // Calculer les scores
+        async function calculateScores() {
+            const snapshot = await database.ref(`games/${currentGameId}/players`).once('value');
+            const players = snapshot.val() || {};
+            const currentIndex = await getCurrentQuestionIndex();
+            const correctAnswer = questions[currentIndex].correct;
+            
+            Object.keys(players).forEach(playerId => {
+                const player = players[playerId];
+                const answer = player.answers && player.answers[currentIndex];
+                
+                if (answer === correctAnswer) {
+                    player.score = (player.score || 0) + 10;
+                }
+            });
+
+            await database.ref(`games/${currentGameId}/players`).set(players);
+        }
+
+        // Afficher les résultats côté hôte
+        async function showHostResults() {
+            showScreen('hostResultsScreen');
+            
+            const currentIndex = await getCurrentQuestionIndex();
+            const question = questions[currentIndex];
+            const correctAnswer = question.options[question.correct];
+            
+            document.getElementById('hostCorrectAnswer').innerHTML = 
+                `<h3>✅ Bonne réponse : ${correctAnswer}</h3>`;
+            
+            // Afficher le classement
+            const snapshot = await database.ref(`games/${currentGameId}/players`).once('value');
+            const players = snapshot.val() || {};
+            const sortedPlayers = Object.values(players).sort((a, b) => (b.score || 0) - (a.score || 0));
+            
+            const scoreBoard = document.getElementById('hostScoreBoard');
+            scoreBoard.innerHTML = '<h3>🏆 Classement actuel :</h3>';
+            
+            sortedPlayers.forEach((player, index) => {
+                const scoreItem = document.createElement('div');
+                scoreItem.className = 'score-item';
+                scoreItem.innerHTML = `
+                    <span>${index + 1}. ${player.name}</span>
+                    <span>${player.score || 0} pts</span>
+                `;
+                scoreBoard.appendChild(scoreItem);
+            });
+            
+            // Timer pour la question suivante
+            let nextTimer = 5;
+            const timerElement = document.getElementById('hostNextTimer');
+            const interval = setInterval(() => {
+                timerElement.textContent = nextTimer;
+                nextTimer--;
+                
+                if (nextTimer < 0) {
+                    clearInterval(interval);
+                    nextQuestion();
+                }
+            }, 1000);
+        }
+
+        // Afficher les résultats côté joueur
+        async function showPlayerResults() {
+            showScreen('playerResultsScreen');
+            
+            const currentIndex = await getCurrentQuestionIndex();
+            const question = questions[currentIndex];
+            const correctAnswer = question.correct;
+            
+            // Vérifier la réponse du joueur
+            const playerSnapshot = await database.ref(`games/${currentGameId}/players/${currentPlayerId}`).once('value');
+            const playerData = playerSnapshot.val();
+            const playerAnswer = playerData.answers && playerData.answers[currentIndex];
+            
+            let resultHTML;
+            if (playerAnswer === correctAnswer) {
+                resultHTML = `
+                    <div style="color: #00b894; font-size: 1.2rem;">
+                        ✅ Bonne réponse ! (+10 points)
+                    </div>
+                `;
+            } else {
+                resultHTML = `
+                    <div style="color: #ff6b6b; font-size: 1.2rem;">
+                        ❌ Mauvaise réponse
+                    </div>
+                    <div>La bonne réponse était : <strong>${question.options[correctAnswer]}</strong></div>
+                `;
+            }
+            
+            document.getElementById('playerAnswerResult').innerHTML = resultHTML;
+            document.getElementById('playerCurrentScore').innerHTML = 
+                `<div style="font-size: 1.1rem; margin-top: 1rem;">Votre score : <strong>${playerData.score || 0} points</strong></div>`;
+            
+            // Timer pour la question suivante
+            let nextTimer = 5;
+            const timerElement = document.getElementById('playerNextTimer');
+            const interval = setInterval(() => {
+                timerElement.textContent = nextTimer;
+                nextTimer--;
+                
+                if (nextTimer < 0) {
+                    clearInterval(interval);
+                }
+            }, 1000);
+        }
+
+        // Passer à la question suivante
+        async function nextQuestion() {
+            const currentIndex = await getCurrentQuestionIndex();
+            const nextIndex = currentIndex + 1;
+            
+            if (nextIndex >= questions.length) {
+                await database.ref(`games/${currentGameId}/gameState`).set('finished');
+            } else {
+                await database.ref(`games/${currentGameId}/currentQuestionIndex`).set(nextIndex);
+                await database.ref(`games/${currentGameId}/gameState`).set('question');
+                await showNextQuestion();
+            }
+        }
+
+        // Afficher les résultats finaux côté hôte
+        async function showHostFinalResults() {
+            showScreen('hostFinalScreen');
+            
+            const snapshot = await database.ref(`games/${currentGameId}/players`).once('value');
+            const players = snapshot.val() || {};
+            const sortedPlayers = Object.values(players).sort((a, b) => (b.score || 0) - (a.score || 0));
+            
+            const scoreBoard = document.getElementById('hostFinalScoreBoard');
+            scoreBoard.innerHTML = '';
+            
+            sortedPlayers.forEach((player, index) => {
+                const scoreItem = document.createElement('div');
+                scoreItem.className = 'score-item';
+                let medal = '';
+                if (index === 0) medal = '🥇';
+                else if (index === 1) medal = '🥈';
+                else if (index === 2) medal = '🥉';
+                
+                scoreItem.innerHTML = `
+                    <span>${medal} ${index + 1}. ${player.name}</span>
+                    <span>${player.score || 0} pts</span>
+                `;
+                scoreBoard.appendChild(scoreItem);
+            });
+        }
+
+        // Afficher les résultats finaux côté joueur
+        async function showPlayerFinalResults() {
+            showScreen('playerFinalScreen');
+            
+            const snapshot = await database.ref(`games/${currentGameId}/players`).once('value');
+            const players = snapshot.val() || {};
+            const sortedPlayers = Object.values(players).sort((a, b) => (b.score || 0) - (a.score || 0));
+            
+            // Trouver la position du joueur
+            const playerIndex = sortedPlayers.findIndex(p => p.id === currentPlayerId);
+            const playerScore = sortedPlayers[playerIndex]?.score || 0;
+            
+            let resultMessage = '';
+            if (playerIndex === 0) {
+                resultMessage = '🥇 Félicitations ! Vous avez gagné !';
+            } else if (playerIndex === 1) {
+                resultMessage = '🥈 Excellent ! Vous êtes deuxième !';
+            } else if (playerIndex === 2) {
+                resultMessage = '🥉 Bravo ! Vous êtes troisième !';
+            } else {
+                resultMessage = `Vous êtes ${playerIndex + 1}${playerIndex === 0 ? 'er' : 'ème'} !`;
+            }
+            
+            document.getElementById('playerFinalResult').innerHTML = `
+                <div style="font-size: 1.3rem; margin-bottom: 1rem;">${resultMessage}</div>
+                <div style="font-size: 1.1rem;">Votre score final : <strong>${playerScore} points</strong></div>
+            `;
+            
+            // Afficher le classement complet
+            const scoreBoard = document.getElementById('playerFinalScoreBoard');
+            scoreBoard.innerHTML = '<h3>🏆 Classement final :</h3>';
+            
+            sortedPlayers.forEach((player, index) => {
+                const scoreItem = document.createElement('div');
+                scoreItem.className = 'score-item';
+                let medal = '';
+                if (index === 0) medal = '🥇';
+                else if (index === 1) medal = '🥈';
+                else if (index === 2) medal = '🥉';
+                
+                // Mettre en évidence le joueur actuel
+                if (player.id === currentPlayerId) {
+                    scoreItem.style.background = 'rgba(255, 107, 107, 0.3)';
+                    scoreItem.style.border = '2px solid #ff6b6b';
+                }
+                
+                scoreItem.innerHTML = `
+                    <span>${medal} ${index + 1}. ${player.name}</span>
+                    <span>${player.score || 0} pts</span>
+                `;
+                scoreBoard.appendChild(scoreItem);
+            });
+        }
+
+        // Timer
+        function startTimer() {
+            timeLeft = 30;
+            document.getElementById('hostTimer').textContent = timeLeft;
+            document.getElementById('playerTimer').textContent = timeLeft;
+            
+            timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('hostTimer').textContent = timeLeft;
+                document.getElementById('playerTimer').textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    if (isHost) {
+                        skipQuestion();
+                    }
+                }
+            }, 1000);
+        }
+
+        // Utilitaires
+        async function getCurrentQuestionIndex() {
+            const snapshot = await database.ref(`games/${currentGameId}/currentQuestionIndex`).once('value');
+            return snapshot.val() || 0;
+        }
+
+        function updatePlayersList(players) {
+            const playersList = document.getElementById('playersList');
+            
+            if (Object.keys(players).length === 0) {
+                playersList.innerHTML = '<p style="opacity: 0.7;">En attente des joueurs...</p>';
+                return;
+            }
+            
+            playersList.innerHTML = '';
+            Object.values(players).forEach(player => {
+                const playerItem = document.createElement('div');
+                playerItem.className = 'player-item';
+                playerItem.innerHTML = `
+                    <span>👤 ${player.name}</span>
+                    <span>${player.score || 0} pts</span>
+                `;
+                playersList.appendChild(playerItem);
+            });
+        }
+
+        function showLoading(loadingId, textId) {
+            document.getElementById(loadingId).style.display = 'inline-block';
+            document.getElementById(textId).style.display = 'none';
+        }
+
+        function hideLoading(loadingId, textId) {
+            document.getElementById(loadingId).style.display = 'none';
+            document.getElementById(textId).style.display = 'inline';
+        }
+
+        function showError(message) {
+            // Créer et afficher un message d'erreur temporaire
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = message;
+            document.querySelector('.container').appendChild(errorDiv);
+            
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        }
+
+        function showJoinError(message) {
+            const errorDiv = document.getElementById('joinError');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function endGameSession() {
+            if (currentGameId) {
+                database.ref(`games/${currentGameId}`).remove();
+            }
+            cleanupGame();
+            showHome();
+        }
+
+        function cleanupGame() {
+            if (currentGameId) {
+                database.ref(`games/${currentGameId}`).off();
+            }
+            
+            if (timer) {
+                clearInterval(timer);
+                timer = null;
+            }
+            
+            currentGameId = null;
+            currentPlayerId = null;
+            isHost = false;
+            questions = [];
+        }
+
+        // Gestion des paramètres URL (pour le QR code)
+        window.addEventListener('load', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const gameParam = urlParams.get('game');
+            
+            if (gameParam) {
+                document.getElementById('gameIdInput').value = gameParam;
+                showJoinGame();
+            }
+        });
+
+        // Gestion de la fermeture de la page
+        window.addEventListener('beforeunload', () => {
+            if (currentGameId && currentPlayerId && !isHost) {
+                database.ref(`games/${currentGameId}/players/${currentPlayerId}`).remove();
+            }
+        });
+
+        // Auto-focus sur les champs de saisie
+        document.getElementById('gameIdInput').addEventListener('input', function(e) {
+            e.target.value = e.target.value.toUpperCase();
+        });
+
+        // Permettre d'appuyer sur Entrée pour rejoindre
+        document.getElementById('playerNameInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                joinGame();
+            }
+        });
+
+        document.getElementById('gameIdInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('playerNameInput').focus();
+            }
+        });
+    </script>
+</body>
+</html>

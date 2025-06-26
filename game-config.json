@@ -1,0 +1,274 @@
+{
+  "gameSettings": {
+    "defaultQuestionTime": 30,
+    "pointsPerCorrectAnswer": 10,
+    "maxPlayersPerGame": 20,
+    "minPlayersToStart": 1,
+    "resultDisplayTime": 5,
+    "gameIdLength": 6,
+    "playerIdLength": 9,
+    "maxPlayerNameLength": 20,
+    "minPlayerNameLength": 2
+  },
+  "themes": {
+    "default": {
+      "name": "Classique",
+      "colors": {
+        "primary": "#667eea",
+        "secondary": "#764ba2",
+        "accent": "#ff6b6b",
+        "success": "#00b894",
+        "warning": "#f39c12",
+        "error": "#e74c3c"
+      },
+      "background": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+    },
+    "ocean": {
+      "name": "Océan",
+      "colors": {
+        "primary": "#0984e3",
+        "secondary": "#74b9ff",
+        "accent": "#00cec9",
+        "success": "#00b894",
+        "warning": "#fdcb6e",
+        "error": "#e84393"
+      },
+      "background": "linear-gradient(135deg, #0984e3 0%, #74b9ff 100%)"
+    },
+    "sunset": {
+      "name": "Coucher de soleil",
+      "colors": {
+        "primary": "#fd79a8",
+        "secondary": "#fdcb6e",
+        "accent": "#e84393",
+        "success": "#00b894",
+        "warning": "#f39c12",
+        "error": "#d63031"
+      },
+      "background": "linear-gradient(135deg, #fd79a8 0%, #fdcb6e 100%)"
+    },
+    "forest": {
+      "name": "Forêt",
+      "colors": {
+        "primary": "#00b894",
+        "secondary": "#55a3ff",
+        "accent": "#6c5ce7",
+        "success": "#00b894",
+        "warning": "#fdcb6e",
+        "error": "#e84393"
+      },
+      "background": "linear-gradient(135deg, #00b894 0%, #55a3ff 100%)"
+    },
+    "dark": {
+      "name": "Mode sombre",
+      "colors": {
+        "primary": "#2d3436",
+        "secondary": "#636e72",
+        "accent": "#fd79a8",
+        "success": "#00b894",
+        "warning": "#fdcb6e",
+        "error": "#e84393"
+      },
+      "background": "linear-gradient(135deg, #2d3436 0%, #636e72 100%)"
+    }
+  },
+  "difficulties": {
+    "facile": {
+      "name": "Facile",
+      "color": "#00b894",
+      "icon": "😊",
+      "timeBonus": 5
+    },
+    "moyen": {
+      "name": "Moyen",
+      "color": "#fdcb6e",
+      "icon": "🤔",
+      "timeBonus": 0
+    },
+    "difficile": {
+      "name": "Redouté",
+      "color": "#e84393",
+      "icon": "😰",
+      "timeBonus": -5
+    }
+  },
+  "categories": {
+    "Europe": {
+      "name": "Europe",
+      "icon": "🇪🇺",
+      "color": "#74b9ff"
+    },
+    "Asie": {
+      "name": "Asie",
+      "icon": "🏯",
+      "color": "#fd79a8"
+    },
+    "Afrique": {
+      "name": "Afrique",
+      "icon": "🦁",
+      "color": "#fdcb6e"
+    },
+    "Amérique": {
+      "name": "Amérique",
+      "icon": "🗽",
+      "color": "#00b894"
+    },
+    "Océanie": {
+      "name": "Océanie",
+      "icon": "🏄",
+      "color": "#6c5ce7"
+    }
+  },
+  "achievements": {
+    "perfect_score": {
+      "name": "Score parfait",
+      "description": "Répondre correctement à toutes les questions",
+      "icon": "🏆",
+      "points": 50
+    },
+    "speed_demon": {
+      "name": "Démon de vitesse",
+      "description": "Répondre en moins de 5 secondes à 5 questions consécutives",
+      "icon": "⚡",
+      "points": 30
+    },
+    "comeback_king": {
+      "name": "Roi du comeback",
+      "description": "Remonter de la dernière place au podium",
+      "icon": "👑",
+      "points": 40
+    },
+    "consistent_player": {
+      "name": "Joueur régulier",
+      "description": "Participer à 10 parties",
+      "icon": "🎯",
+      "points": 20
+    },
+    "geography_expert": {
+      "name": "Expert en géographie",
+      "description": "Répondre correctement à 100 questions",
+      "icon": "🌍",
+      "points": 100
+    }
+  },
+  "powerUps": {
+    "fifty_fifty": {
+      "name": "50/50",
+      "description": "Éliminer 2 mauvaises réponses",
+      "icon": "✂️",
+      "cost": 10,
+      "maxUses": 3
+    },
+    "extra_time": {
+      "name": "Temps supplémentaire",
+      "description": "Ajouter 15 secondes au timer",
+      "icon": "⏰",
+      "cost": 15,
+      "maxUses": 2
+    },
+    "skip_question": {
+      "name": "Passer la question",
+      "description": "Passer une question sans perdre de points",
+      "icon": "⏭️",
+      "cost": 20,
+      "maxUses": 1
+    }
+  },
+  "sounds": {
+    "correctAnswer": "sounds/correct.mp3",
+    "wrongAnswer": "sounds/wrong.mp3",
+    "questionStart": "sounds/question.mp3",
+    "gameStart": "sounds/start.mp3",
+    "gameEnd": "sounds/end.mp3",
+    "playerJoin": "sounds/join.mp3",
+    "countdown": "sounds/countdown.mp3"
+  },
+  "animations": {
+    "questionReveal": {
+      "duration": 800,
+      "easing": "ease-out"
+    },
+    "answerReveal": {
+      "duration": 1200,
+      "easing": "ease-in-out"
+    },
+    "scoreUpdate": {
+      "duration": 600,
+      "easing": "ease-out"
+    }
+  },
+  "localization": {
+    "fr": {
+      "welcome": "Bienvenue au Quiz des Capitales !",
+      "createGame": "Créer une partie",
+      "joinGame": "Rejoindre une partie",
+      "startGame": "Commencer la partie",
+      "nextQuestion": "Question suivante",
+      "finalResults": "Résultats finaux",
+      "yourScore": "Votre score",
+      "timeLeft": "Temps restant",
+      "question": "Question",
+      "of": "sur",
+      "players": "joueurs",
+      "waiting": "En attente...",
+      "gameEnded": "Partie terminée",
+      "playAgain": "Rejouer",
+      "backToHome": "Retour à l'accueil"
+    },
+    "en": {
+      "welcome": "Welcome to the Capitals Quiz!",
+      "createGame": "Create Game",
+      "joinGame": "Join Game",
+      "startGame": "Start Game",
+      "nextQuestion": "Next Question",
+      "finalResults": "Final Results",
+      "yourScore": "Your Score",
+      "timeLeft": "Time Left",
+      "question": "Question",
+      "of": "of",
+      "players": "players",
+      "waiting": "Waiting...",
+      "gameEnded": "Game Ended",
+      "playAgain": "Play Again",
+      "backToHome": "Back to Home"
+    }
+  },
+  "gameRules": {
+    "scoring": {
+      "correctAnswer": 10,
+      "timeBonus": {
+        "description": "Bonus basé sur le temps de réponse",
+        "maxBonus": 5,
+        "formula": "Math.floor((timeLeft / totalTime) * maxBonus)"
+      },
+      "streakBonus": {
+        "description": "Bonus pour les réponses consécutives correctes",
+        "bonusPerStreak": 2,
+        "maxStreak": 5
+      }
+    },
+    "timing": {
+      "questionTime": 30,
+      "resultTime": 5,
+      "finalResultTime": 10
+    },
+    "penalties": {
+      "wrongAnswer": 0,
+      "noAnswer": 0,
+      "disconnect": -5
+    }
+  },
+  "features": {
+    "enableSound": true,
+    "enableAnimations": true,
+    "enableNotifications": true,
+    "enableVibration": true,
+    "autoNextQuestion": true,
+    "showCorrectAnswer": true,
+    "showPlayerAnswers": false,
+    "allowSpectators": true,
+    "enableChat": false,
+    "enablePowerUps": false,
+    "enableAchievements": false
+  }
+}
