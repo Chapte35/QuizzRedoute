@@ -616,14 +616,11 @@
             return Math.random().toString(36).substr(2, 9);
         }
 
-        // Génération du QR Code
+        // Génération du QR Code avec plusieurs fallbacks
         function generateQRCode() {
             const gameUrl = `${window.location.origin}${window.location.pathname}?game=${currentGameId}`;
             
             console.log('🔗 Génération QR Code pour:', gameUrl);
-            
-            // Utiliser l'API Google Chart pour générer le QR code
-            const qrUrl = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(gameUrl)}`;
             
             const qrContainer = document.getElementById('qrcode');
             
@@ -632,27 +629,128 @@
                 return;
             }
             
-            qrContainer.innerHTML = `
-                <div style="text-align: center;">
-                    <img src="${qrUrl}" 
-                         alt="QR Code pour rejoindre la partie" 
-                         style="width: 200px; height: 200px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
-                         onload="console.log('✅ QR Code chargé avec succès')"
-                         onerror="console.error('❌ Erreur chargement QR Code'); this.style.display='none'; this.nextElementSibling.style.display='block';">
-                    <div style="display: none; padding: 20px; background: white; border-radius: 10px; color: #333; margin-top: 10px;">
-                        <p><strong>🔗 Lien direct :</strong></p>
-                        <div style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin: 10px 0; word-break: break-all; font-family: monospace; font-size: 0.85rem;">
+            // Essayer plusieurs APIs de QR Code
+            const qrApis = [
+                `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(gameUrl)}`,
+                `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(gameUrl)}`,
+                `https://quickchart.io/qr?text=${encodeURIComponent(gameUrl)}&size=200`
+            ];
+            
+            let currentApiIndex = 0;
+            
+            function tryNextApi() {
+                if (currentApiIndex >= qrApis.length) {
+                    // Toutes les APIs ont échoué, afficher le lien direct
+                    showDirectLink();
+                    return;
+                }
+                
+                const qrUrl = qrApis[currentApiIndex];
+                console.log(`🔄 Tentative API ${currentApiIndex + 1}:`, qrUrl);
+                
+                qrContainer.innerHTML = `
+                    <div style="text-align: center;">
+                        <img src="${qrUrl}" 
+                             alt="QR Code pour rejoindre la partie" 
+                             style="width: 200px; height: 200px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
+                             onload="console.log('✅ QR Code chargé avec l\\'API ${currentApiIndex + 1}')"
+                             onerror="console.warn('❌ API ${currentApiIndex + 1} échouée, tentative suivante...'); tryNextApi();">
+                        <div style="margin-top: 10px; font-size: 0.9rem; opacity: 0.8;">
+                            📱 Scannez avec votre téléphone
+                        </div>
+                    </div>
+                `;
+                
+                currentApiIndex++;
+            }
+            
+            function showDirectLink() {
+                console.log('🔗 Affichage du lien direct en fallback');
+                qrContainer.innerHTML = `
+                    <div style="text-align: center; padding: 20px; background: white; border-radius: 10px; color: #333;">
+                        <div style="font-size: 1.1rem; margin-bottom: 15px; color: #666;">
+                            📱 <strong>QR Code indisponible</strong>
+                        </div>
+                        <div style="margin-bottom: 15px; font-weight: 600;">
+                            🔗 Lien direct :
+                        </div>
+                        <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 10px 0; word-break: break-all; font-family: monospace; font-size: 0.85rem; border: 2px dashed #ddd;">
                             ${gameUrl}
                         </div>
-                        <p style="font-size: 0.8rem; opacity: 0.7;">
-                            📱 Copiez ce lien dans votre navigateur mobile<br>
-                            ou partagez-le avec vos amis
-                        </p>
+                        <div style="font-size: 0.8rem; color: #666; line-height: 1.4;">
+                            📋 <strong>Instructions :</strong><br>
+                            1. Copiez le lien ci-dessus<br>
+                            2. Ouvrez-le sur votre téléphone<br>
+                            3. Ou envoyez-le à vos amis par message
+                        </div>
+                        <button onclick="copyToClipboard('${gameUrl}')" 
+                                style="margin-top: 15px; padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                            📋 Copier le lien
+                        </button>
                     </div>
-                </div>
+                `;
+            }
+            
+            // Commencer par la première API
+            tryNextApi();
+        }
+        
+        // Fonction pour copier dans le presse-papier
+        function copyToClipboard(text) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showNotification('✅ Lien copié !', 'success');
+                }).catch(() => {
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        }
+        
+        function fallbackCopy(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                showNotification('✅ Lien copié !', 'success');
+            } catch (err) {
+                showNotification('❌ Impossible de copier automatiquement', 'error');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+        
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 600;
+                z-index: 10000;
+                animation: slideIn 0.3s ease-out;
+                max-width: 300px;
+                ${type === 'success' ? 'background: linear-gradient(135deg, #00b894, #00a085);' : 
+                  type === 'error' ? 'background: linear-gradient(135deg, #e74c3c, #c0392b);' : 
+                  'background: linear-gradient(135deg, #3498db, #2980b9);'}
             `;
             
-            console.log('✅ QR Code généré avec l\'URL:', qrUrl);
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-in forwards';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
         }
 
         // Configuration des écouteurs pour l'hôte
