@@ -354,7 +354,11 @@
                 Code de la partie : <span id="gameIdDisplay"></span>
             </div>
             <div class="qr-container">
-                <div id="qrcode"></div>
+                <div id="qrcode">
+                    <div style="padding: 20px; color: #666;">
+                        Génération du QR code...
+                    </div>
+                </div>
             </div>
             <p>Scannez le QR code ou entrez le code de la partie sur votre téléphone</p>
             
@@ -615,29 +619,40 @@
         // Génération du QR Code
         function generateQRCode() {
             const gameUrl = `${window.location.origin}${window.location.pathname}?game=${currentGameId}`;
+            
+            console.log('🔗 Génération QR Code pour:', gameUrl);
+            
+            // Utiliser l'API Google Chart pour générer le QR code
             const qrUrl = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(gameUrl)}`;
             
             const qrContainer = document.getElementById('qrcode');
+            
+            if (!qrContainer) {
+                console.error('❌ Élément qrcode introuvable !');
+                return;
+            }
+            
             qrContainer.innerHTML = `
                 <div style="text-align: center;">
                     <img src="${qrUrl}" 
                          alt="QR Code pour rejoindre la partie" 
                          style="width: 200px; height: 200px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
-                         onload="console.log('✅ QR Code chargé')"
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                         onload="console.log('✅ QR Code chargé avec succès')"
+                         onerror="console.error('❌ Erreur chargement QR Code'); this.style.display='none'; this.nextElementSibling.style.display='block';">
                     <div style="display: none; padding: 20px; background: white; border-radius: 10px; color: #333; margin-top: 10px;">
                         <p><strong>🔗 Lien direct :</strong></p>
                         <div style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin: 10px 0; word-break: break-all; font-family: monospace; font-size: 0.85rem;">
                             ${gameUrl}
                         </div>
                         <p style="font-size: 0.8rem; opacity: 0.7;">
-                            📱 Copiez ce lien dans votre navigateur mobile
+                            📱 Copiez ce lien dans votre navigateur mobile<br>
+                            ou partagez-le avec vos amis
                         </p>
                     </div>
                 </div>
             `;
             
-            console.log('🔗 URL de la partie générée:', gameUrl);
+            console.log('✅ QR Code généré avec l\'URL:', qrUrl);
         }
 
         // Configuration des écouteurs pour l'hôte
