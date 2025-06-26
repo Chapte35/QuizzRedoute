@@ -397,7 +397,10 @@
             <div id="hostCorrectAnswer"></div>
             <div class="score-board" id="hostScoreBoard"></div>
             <div id="hostNextQuestionInfo">Question suivante dans <span id="hostNextTimer">5</span> secondes...</div>
-            <button class="btn debug" onclick="debugGameState()">🔍 Debug</button>
+            <div style="margin: 1rem 0;">
+                <button class="btn success" onclick="forceNextQuestion()">⏭️ Question suivante</button>
+                <button class="btn debug" onclick="debugGameState()">🔍 Debug</button>
+            </div>
         </div>
 
         <!-- Écran hôte - Résultats finaux -->
@@ -884,13 +887,15 @@
                     const optionsGrid = document.getElementById('hostOptionsGrid');
                     optionsGrid.innerHTML = '';
                     
+                    // NE PAS afficher la bonne réponse en vert pendant la question !
                     question.options.forEach((option, index) => {
                         const btn = document.createElement('div');
                         btn.className = 'option-btn';
                         btn.textContent = option;
-                        if (index === question.correct) {
-                            btn.classList.add('correct');
-                        }
+                        // Enlever cette ligne qui affichait la réponse en vert :
+                        // if (index === question.correct) {
+                        //     btn.classList.add('correct');
+                        // }
                         optionsGrid.appendChild(btn);
                     });
                 }
@@ -920,14 +925,14 @@
                         
                         // Auto-passer si tous ont répondu
                         if (answeredPlayers === totalPlayers && totalPlayers > 0) {
-                            console.log('✅ Tous les joueurs ont répondu, passage automatique');
+                            console.log('✅ Tous les joueurs ont répondu, passage automatique dans 2 secondes');
                             setTimeout(() => {
                                 if (timer) {
                                     clearInterval(timer);
                                     timer = null;
                                 }
                                 skipQuestion();
-                            }, 1000);
+                            }, 2000); // Augmenté à 2 secondes pour laisser le temps de voir
                         }
                     });
                 });
@@ -1074,15 +1079,23 @@
             // Timer pour la question suivante
             let nextTimer = 5;
             const timerElement = document.getElementById('hostNextTimer');
-            const interval = setInterval(() => {
-                timerElement.textContent = nextTimer;
+            const nextQuestionInterval = setInterval(() => {
+                if (timerElement) {
+                    timerElement.textContent = nextTimer;
+                }
                 nextTimer--;
                 
+                console.log(`⏱️ Question suivante dans ${nextTimer + 1} secondes`);
+                
                 if (nextTimer < 0) {
-                    clearInterval(interval);
+                    clearInterval(nextQuestionInterval);
+                    console.log('⏭️ Timer fini, passage à la question suivante');
                     nextQuestion();
                 }
             }, 1000);
+            
+            // Sauvegarder l'interval pour pouvoir l'arrêter si nécessaire
+            window.currentResultTimer = nextQuestionInterval;
         }
 
         // Afficher les résultats côté joueur
@@ -1346,7 +1359,35 @@
 
         function forceNextQuestion() {
             console.log('🚀 Passage forcé à la question suivante');
-            skipQuestion();
+            
+            // Arrêter le timer des résultats s'il existe
+            if (window.currentResultTimer) {
+                clearInterval(window.currentResultTimer);
+                window.currentResultTimer = null;
+            }
+            
+            // Arrêter le timer de question s'il existe
+            if (timer) {
+                clearInterval(timer);
+                timer = null;
+            }
+            
+            // Déterminer quelle action effectuer selon l'écran actuel
+            const currentScreen = document.querySelector('.screen.active');
+            if (currentScreen) {
+                const screenId = currentScreen.id;
+                console.log('📺 Écran actuel:', screenId);
+                
+                if (screenId === 'hostQuestionScreen') {
+                    // Depuis l'écran question → aller aux résultats
+                    skipQuestion();
+                } else if (screenId === 'hostResultsScreen') {
+                    // Depuis l'écran résultats → aller à la question suivante
+                    nextQuestion();
+                } else {
+                    console.log('⚠️ Pas sur un écran de question/résultats');
+                }
+            }
         }
 
         function endGameSession() {
