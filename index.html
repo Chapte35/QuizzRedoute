@@ -72,12 +72,24 @@
             transform: translateY(0);
         }
 
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .btn.secondary {
             background: linear-gradient(45deg, #74b9ff, #0984e3);
         }
 
         .btn.success {
             background: linear-gradient(45deg, #00b894, #00a085);
+        }
+
+        .btn.debug {
+            background: linear-gradient(45deg, #6c5ce7, #5f3dc4);
+            font-size: 0.8rem;
+            padding: 0.5rem 1rem;
         }
 
         .input-group {
@@ -171,6 +183,11 @@
             transform: translateY(-2px);
         }
 
+        .option-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
         .option-btn.selected {
             border-color: #ff6b6b;
             background: rgba(255, 107, 107, 0.3);
@@ -207,6 +224,15 @@
             margin: 0.5rem 0;
             background: rgba(255, 255, 255, 0.1);
             border-radius: 5px;
+        }
+
+        .debug-info {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.5rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+            font-size: 0.8rem;
+            font-family: monospace;
         }
 
         .mobile-warning {
@@ -265,6 +291,16 @@
             padding: 1rem;
             border-radius: 10px;
             margin: 1rem 0;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
         }
     </style>
 </head>
@@ -333,6 +369,7 @@
                 ⚡ Commencer la partie
             </button>
             <button class="btn secondary" onclick="endGameSession()">🚪 Quitter</button>
+            <button class="btn debug" onclick="debugGameState()">🔍 Debug</button>
         </div>
 
         <!-- Écran hôte - Question en cours -->
@@ -343,7 +380,11 @@
                 <div class="options-grid" id="hostOptionsGrid"></div>
             </div>
             <div id="hostAnswersCount">En attente des réponses...</div>
-            <button class="btn secondary" onclick="skipQuestion()">⏭️ Passer</button>
+            <div style="margin: 1rem 0;">
+                <button class="btn secondary" onclick="skipQuestion()">⏭️ Passer</button>
+                <button class="btn debug" onclick="debugGameState()">🔍 Debug</button>
+                <button class="btn debug" onclick="forceNextQuestion()">🚀 Forcer suite</button>
+            </div>
         </div>
 
         <!-- Écran hôte - Résultats -->
@@ -352,6 +393,7 @@
             <div id="hostCorrectAnswer"></div>
             <div class="score-board" id="hostScoreBoard"></div>
             <div id="hostNextQuestionInfo">Question suivante dans <span id="hostNextTimer">5</span> secondes...</div>
+            <button class="btn debug" onclick="debugGameState()">🔍 Debug</button>
         </div>
 
         <!-- Écran hôte - Résultats finaux -->
@@ -402,34 +444,31 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
-    
-    <!-- QR Code Library -->
-	<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 
     <script>
-        // Configuration Firebase - REMPLACEZ PAR VOS PROPRES CLÉS
+        // Configuration Firebase avec vos vraies informations
         const firebaseConfig = {
-			apiKey: "AIzaSyANRVNNOYHP6959ujOl0694G2pz-Vb_Hwk",
-			authDomain: "quizzcapitales-76ee3.firebaseapp.com",
-			databaseURL: "https://quizzcapitales-76ee3-default-rtdb.europe-west1.firebasedatabase.app",
-			projectId: "quizzcapitales-76ee3",
-			storageBucket: "quizzcapitales-76ee3.firebasestorage.app",
-			messagingSenderId: "222950845814",
-			appId: "1:222950845814:web:b4715f2476600675e95e57"
-			};
+            apiKey: "AIzaSyANRVNNOYHP6959ujOl0694G2pz-Vb_Hwk",
+            authDomain: "quizzcapitales-76ee3.firebaseapp.com",
+            databaseURL: "https://quizzcapitales-76ee3-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "quizzcapitales-76ee3",
+            storageBucket: "quizzcapitales-76ee3.firebasestorage.app",
+            messagingSenderId: "222950845814",
+            appId: "1:222950845814:web:b4715f2476600675e95e57"
+        };
 
         // Initialisation Firebase
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
         // Variables globales
-        let quizManager = null;
         let currentGameId = null;
         let currentPlayerId = null;
         let isHost = false;
         let questions = [];
         let timer = null;
         let timeLeft = 30;
+        let questionListeners = [];
 
         // Chargement des questions
         async function loadQuestions() {
@@ -437,9 +476,10 @@
                 const response = await fetch('./questions.json');
                 const data = await response.json();
                 questions = data.questions;
+                console.log('✅ Questions chargées:', questions.length);
                 return questions;
             } catch (error) {
-                console.error('Erreur lors du chargement des questions:', error);
+                console.error('❌ Erreur lors du chargement des questions:', error);
                 showError('Erreur lors du chargement des questions');
                 return [];
             }
@@ -451,6 +491,7 @@
                 screen.classList.remove('active');
             });
             document.getElementById(screenId).classList.add('active');
+            console.log('📺 Écran affiché:', screenId);
         }
 
         function showHome() {
@@ -468,6 +509,7 @@
 
         // Création d'une partie (hôte)
         async function createGame() {
+            console.log('🚀 Début création partie...');
             showLoading('createGameLoading', 'createGameText');
             
             try {
@@ -478,6 +520,7 @@
 
                 currentGameId = generateGameId();
                 isHost = true;
+                console.log('🔑 Game ID généré:', currentGameId);
 
                 const gameData = {
                     id: currentGameId,
@@ -489,7 +532,9 @@
                     createdAt: Date.now()
                 };
 
+                console.log('💾 Sauvegarde en cours...');
                 await database.ref(`games/${currentGameId}`).set(gameData);
+                console.log('✅ Partie créée avec succès !');
                 
                 document.getElementById('gameIdDisplay').textContent = currentGameId;
                 generateQRCode();
@@ -497,8 +542,8 @@
                 showScreen('hostWaitingScreen');
                 
             } catch (error) {
-                console.error('Erreur lors de la création de la partie:', error);
-                showError('Erreur lors de la création de la partie');
+                console.error('❌ Erreur lors de la création de la partie:', error);
+                showError('Erreur lors de la création de la partie: ' + error.message);
             } finally {
                 hideLoading('createGameLoading', 'createGameText');
             }
@@ -514,6 +559,7 @@
                 return;
             }
 
+            console.log('🎯 Tentative de connexion:', gameId, playerName);
             showLoading('joinGameLoading', 'joinGameText');
 
             try {
@@ -532,6 +578,8 @@
                 currentPlayerId = generatePlayerId();
                 isHost = false;
 
+                console.log('👤 Player ID généré:', currentPlayerId);
+
                 const playerData = {
                     id: currentPlayerId,
                     name: playerName,
@@ -541,13 +589,14 @@
                 };
 
                 await database.ref(`games/${gameId}/players/${currentPlayerId}`).set(playerData);
+                console.log('✅ Joueur connecté avec succès !');
                 
                 document.getElementById('playerGameId').textContent = gameId;
                 setupPlayerListeners();
                 showScreen('playerWaitingScreen');
                 
             } catch (error) {
-                console.error('Erreur lors de la connexion:', error);
+                console.error('❌ Erreur lors de la connexion:', error);
                 showJoinError(error.message || 'Erreur lors de la connexion');
             } finally {
                 hideLoading('joinGameLoading', 'joinGameText');
@@ -563,38 +612,42 @@
             return Math.random().toString(36).substr(2, 9);
         }
 
-    // Génération du QR Code
-    function generateQRCode() {
-	const gameUrl = `${window.location.origin}${window.location.pathname}?game=${currentGameId}`;
-    
-    try {
-        // Créer le QR code avec qrcode-generator
-        const qr = qrcode(0, 'M');
-        qr.addData(gameUrl);
-        qr.make();
-        
-        // Créer l'élément image
-        const qrContainer = document.getElementById('qrcode');
-        qrContainer.innerHTML = qr.createImgTag(4, 8); // taille 4, marge 8
-        
-        console.log('✅ QR Code généré pour:', gameUrl);
-    } catch (error) {
-        console.error('❌ Erreur génération QR Code:', error);
-        // Fallback : afficher juste l'URL
-        document.getElementById('qrcode').innerHTML = `
-            <div style="padding: 20px; background: white; border-radius: 10px; color: #333;">
-                <p><strong>Lien de la partie :</strong></p>
-                <p style="word-break: break-all; font-family: monospace;">${gameUrl}</p>
-            </div>
-        `;
-    }
-}
+        // Génération du QR Code
+        function generateQRCode() {
+            const gameUrl = `${window.location.origin}${window.location.pathname}?game=${currentGameId}`;
+            const qrUrl = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(gameUrl)}`;
+            
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = `
+                <div style="text-align: center;">
+                    <img src="${qrUrl}" 
+                         alt="QR Code pour rejoindre la partie" 
+                         style="width: 200px; height: 200px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
+                         onload="console.log('✅ QR Code chargé')"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <div style="display: none; padding: 20px; background: white; border-radius: 10px; color: #333; margin-top: 10px;">
+                        <p><strong>🔗 Lien direct :</strong></p>
+                        <div style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin: 10px 0; word-break: break-all; font-family: monospace; font-size: 0.85rem;">
+                            ${gameUrl}
+                        </div>
+                        <p style="font-size: 0.8rem; opacity: 0.7;">
+                            📱 Copiez ce lien dans votre navigateur mobile
+                        </p>
+                    </div>
+                </div>
+            `;
+            
+            console.log('🔗 URL de la partie générée:', gameUrl);
+        }
 
         // Configuration des écouteurs pour l'hôte
         function setupHostListeners() {
+            console.log('🎧 Configuration des écouteurs hôte pour:', currentGameId);
+            
             // Écouter les nouveaux joueurs
             database.ref(`games/${currentGameId}/players`).on('value', (snapshot) => {
                 const players = snapshot.val() || {};
+                console.log('👥 Mise à jour joueurs:', Object.keys(players).length, 'joueurs');
                 updatePlayersList(players);
                 
                 // Activer le bouton start si au moins un joueur
@@ -611,9 +664,12 @@
 
         // Configuration des écouteurs pour les joueurs
         function setupPlayerListeners() {
+            console.log('🎧 Configuration des écouteurs joueur pour:', currentGameId);
+            
             // Écouter les changements d'état du jeu
             database.ref(`games/${currentGameId}/gameState`).on('value', (snapshot) => {
                 const gameState = snapshot.val();
+                console.log('🎮 État du jeu changé:', gameState);
                 handleGameStateChange(gameState);
             });
 
@@ -621,6 +677,7 @@
             database.ref(`games/${currentGameId}/currentQuestion`).on('value', (snapshot) => {
                 const question = snapshot.val();
                 if (question && !isHost) {
+                    console.log('📝 Nouvelle question reçue:', question.id);
                     displayPlayerQuestion(question);
                 }
             });
@@ -629,7 +686,7 @@
             database.ref(`games/${currentGameId}/currentQuestionIndex`).on('value', (snapshot) => {
                 const index = snapshot.val();
                 if (index !== null && !isHost) {
-                    currentQuestionIndex = index;
+                    console.log('📊 Index question:', index);
                 }
             });
         }
@@ -668,27 +725,32 @@
 
         // Démarrer la partie (hôte)
         async function startGame() {
+            console.log('🚀 Démarrage de la partie...');
             try {
                 await database.ref(`games/${currentGameId}/gameState`).set('question');
                 await database.ref(`games/${currentGameId}/currentQuestionIndex`).set(0);
                 await showNextQuestion();
+                console.log('✅ Partie démarrée !');
             } catch (error) {
-                console.error('Erreur lors du démarrage:', error);
+                console.error('❌ Erreur lors du démarrage:', error);
                 showError('Erreur lors du démarrage de la partie');
             }
         }
 
         // Afficher la question suivante (hôte)
         async function showNextQuestion() {
+            console.log('📝 Affichage de la question suivante...');
             const questionIndex = await database.ref(`games/${currentGameId}/currentQuestionIndex`).once('value');
             const currentIndex = questionIndex.val() || 0;
 
             if (currentIndex >= questions.length) {
+                console.log('🏁 Fin des questions, affichage des résultats finaux');
                 await database.ref(`games/${currentGameId}/gameState`).set('finished');
                 return;
             }
 
             const question = questions[currentIndex];
+            console.log('📊 Question actuelle:', currentIndex + 1, '/', questions.length);
             await database.ref(`games/${currentGameId}/currentQuestion`).set(question);
             
             showHostQuestion();
@@ -697,8 +759,10 @@
 
         // Afficher la question côté hôte
         function showHostQuestion() {
+            console.log('🖥️ Affichage question côté hôte');
             showScreen('hostQuestionScreen');
             
+            // Récupérer et afficher la question
             database.ref(`games/${currentGameId}/currentQuestion`).once('value', (snapshot) => {
                 const question = snapshot.val();
                 if (question) {
@@ -719,25 +783,54 @@
                 }
             });
 
-            // Compter les réponses
-            database.ref(`games/${currentGameId}/players`).on('value', (snapshot) => {
-                const players = snapshot.val() || {};
-                const currentIndex = getCurrentQuestionIndex();
-                let answeredCount = 0;
-                
-                Object.values(players).forEach(player => {
-                    if (player.answers && player.answers[currentIndex] !== undefined) {
-                        answeredCount++;
-                    }
+            // Fonction pour compter les réponses
+            function updateAnswerCount() {
+                database.ref(`games/${currentGameId}/players`).once('value', (snapshot) => {
+                    const players = snapshot.val() || {};
+                    database.ref(`games/${currentGameId}/currentQuestionIndex`).once('value', (indexSnapshot) => {
+                        const currentIndex = indexSnapshot.val() || 0;
+                        
+                        let totalPlayers = 0;
+                        let answeredPlayers = 0;
+                        
+                        Object.values(players).forEach(player => {
+                            totalPlayers++;
+                            if (player.answers && player.answers[currentIndex] !== undefined) {
+                                answeredPlayers++;
+                            }
+                        });
+                        
+                        const answerCountElement = document.getElementById('hostAnswersCount');
+                        answerCountElement.textContent = `${answeredPlayers}/${totalPlayers} joueurs ont répondu`;
+                        
+                        console.log(`📊 Réponses: ${answeredPlayers}/${totalPlayers}`);
+                        
+                        // Auto-passer si tous ont répondu
+                        if (answeredPlayers === totalPlayers && totalPlayers > 0) {
+                            console.log('✅ Tous les joueurs ont répondu, passage automatique');
+                            setTimeout(() => {
+                                if (timer) {
+                                    clearInterval(timer);
+                                    timer = null;
+                                }
+                                skipQuestion();
+                            }, 1000);
+                        }
+                    });
                 });
-                
-                document.getElementById('hostAnswersCount').textContent = 
-                    `${answeredCount}/${Object.keys(players).length} joueurs ont répondu`;
-            });
+            }
+            
+            // Écouter les changements de réponses EN TEMPS RÉEL
+            const answerListener = database.ref(`games/${currentGameId}/players`).on('value', updateAnswerCount);
+            questionListeners.push(answerListener);
+            
+            // Compter initialement
+            updateAnswerCount();
         }
 
         // Afficher la question côté joueur
         function displayPlayerQuestion(question) {
+            console.log('📱 Affichage question côté joueur:', question.question);
             document.getElementById('playerQuestionText').textContent = question.question;
             
             const optionsGrid = document.getElementById('playerOptionsGrid');
@@ -757,10 +850,20 @@
         // Sélectionner une réponse (joueur)
         async function selectAnswer(answerIndex) {
             try {
-                const currentIndex = await getCurrentQuestionIndex();
+                console.log(`📝 Joueur ${currentPlayerId} répond: ${answerIndex}`);
+                
+                // Récupérer l'index de la question actuelle
+                const indexSnapshot = await database.ref(`games/${currentGameId}/currentQuestionIndex`).once('value');
+                const currentIndex = indexSnapshot.val() || 0;
+                
+                console.log(`📊 Question actuelle: ${currentIndex}`);
+                
+                // Sauvegarder la réponse
                 await database.ref(`games/${currentGameId}/players/${currentPlayerId}/answers/${currentIndex}`).set(answerIndex);
                 
-                // Marquer la réponse comme sélectionnée
+                console.log(`✅ Réponse sauvegardée: joueur ${currentPlayerId}, question ${currentIndex}, réponse ${answerIndex}`);
+                
+                // Marquer visuellement la réponse
                 document.querySelectorAll('#playerOptionsGrid .option-btn').forEach((btn, index) => {
                     btn.classList.remove('selected');
                     if (index === answerIndex) {
@@ -771,24 +874,43 @@
                 
                 document.getElementById('playerSelectedAnswer').style.display = 'block';
                 
+                // Vérifier dans la base de données
+                const checkSnapshot = await database.ref(`games/${currentGameId}/players/${currentPlayerId}/answers/${currentIndex}`).once('value');
+                console.log(`🔍 Vérification sauvegarde: ${checkSnapshot.val()}`);
+                
             } catch (error) {
-                console.error('Erreur lors de l\'envoi de la réponse:', error);
+                console.error('❌ Erreur lors de l\'envoi de la réponse:', error);
+                alert('Erreur lors de l\'envoi de votre réponse. Veuillez réessayer.');
             }
         }
 
         // Passer à la question suivante ou aux résultats
         async function skipQuestion() {
-            clearInterval(timer);
-            await database.ref(`games/${currentGameId}/gameState`).set('results');
-            await calculateScores();
+            console.log('⏭️ Passage à la question suivante...');
+            
+            if (timer) {
+                clearInterval(timer);
+                timer = null;
+            }
+            
+            try {
+                await database.ref(`games/${currentGameId}/gameState`).set('results');
+                await calculateScores();
+                console.log('✅ Scores calculés, affichage des résultats');
+            } catch (error) {
+                console.error('❌ Erreur lors du passage à la question suivante:', error);
+            }
         }
 
         // Calculer les scores
         async function calculateScores() {
+            console.log('🧮 Calcul des scores...');
             const snapshot = await database.ref(`games/${currentGameId}/players`).once('value');
             const players = snapshot.val() || {};
             const currentIndex = await getCurrentQuestionIndex();
             const correctAnswer = questions[currentIndex].correct;
+            
+            console.log(`✅ Bonne réponse: ${correctAnswer}`);
             
             Object.keys(players).forEach(playerId => {
                 const player = players[playerId];
@@ -796,14 +918,19 @@
                 
                 if (answer === correctAnswer) {
                     player.score = (player.score || 0) + 10;
+                    console.log(`✅ ${player.name} a bien répondu (+10 points)`);
+                } else {
+                    console.log(`❌ ${player.name} a mal répondu`);
                 }
             });
 
             await database.ref(`games/${currentGameId}/players`).set(players);
+            console.log('💾 Scores sauvegardés');
         }
 
         // Afficher les résultats côté hôte
         async function showHostResults() {
+            console.log('📊 Affichage résultats côté hôte');
             showScreen('hostResultsScreen');
             
             const currentIndex = await getCurrentQuestionIndex();
@@ -847,6 +974,7 @@
 
         // Afficher les résultats côté joueur
         async function showPlayerResults() {
+            console.log('📱 Affichage résultats côté joueur');
             showScreen('playerResultsScreen');
             
             const currentIndex = await getCurrentQuestionIndex();
@@ -893,10 +1021,12 @@
 
         // Passer à la question suivante
         async function nextQuestion() {
+            console.log('➡️ Passage à la question suivante');
             const currentIndex = await getCurrentQuestionIndex();
             const nextIndex = currentIndex + 1;
             
             if (nextIndex >= questions.length) {
+                console.log('🏁 Fin du quiz');
                 await database.ref(`games/${currentGameId}/gameState`).set('finished');
             } else {
                 await database.ref(`games/${currentGameId}/currentQuestionIndex`).set(nextIndex);
@@ -907,6 +1037,7 @@
 
         // Afficher les résultats finaux côté hôte
         async function showHostFinalResults() {
+            console.log('🏆 Affichage résultats finaux côté hôte');
             showScreen('hostFinalScreen');
             
             const snapshot = await database.ref(`games/${currentGameId}/players`).once('value');
@@ -934,6 +1065,7 @@
 
         // Afficher les résultats finaux côté joueur
         async function showPlayerFinalResults() {
+            console.log('🏁 Affichage résultats finaux côté joueur');
             showScreen('playerFinalScreen');
             
             const snapshot = await database.ref(`games/${currentGameId}/players`).once('value');
@@ -988,17 +1120,29 @@
 
         // Timer
         function startTimer() {
+            if (timer) {
+                clearInterval(timer);
+            }
+            
             timeLeft = 30;
-            document.getElementById('hostTimer').textContent = timeLeft;
-            document.getElementById('playerTimer').textContent = timeLeft;
+            const hostTimerEl = document.getElementById('hostTimer');
+            const playerTimerEl = document.getElementById('playerTimer');
+            
+            console.log('⏰ Timer démarré: 30 secondes');
+            
+            if (hostTimerEl) hostTimerEl.textContent = timeLeft;
+            if (playerTimerEl) playerTimerEl.textContent = timeLeft;
             
             timer = setInterval(() => {
                 timeLeft--;
-                document.getElementById('hostTimer').textContent = timeLeft;
-                document.getElementById('playerTimer').textContent = timeLeft;
+                
+                if (hostTimerEl) hostTimerEl.textContent = timeLeft;
+                if (playerTimerEl) playerTimerEl.textContent = timeLeft;
                 
                 if (timeLeft <= 0) {
+                    console.log('⏰ Temps écoulé !');
                     clearInterval(timer);
+                    timer = null;
                     if (isHost) {
                         skipQuestion();
                     }
@@ -1043,7 +1187,6 @@
         }
 
         function showError(message) {
-            // Créer et afficher un message d'erreur temporaire
             const errorDiv = document.createElement('div');
             errorDiv.className = 'error';
             errorDiv.textContent = message;
@@ -1064,6 +1207,35 @@
             }, 5000);
         }
 
+        // Fonctions de debug
+        function debugGameState() {
+            console.log('🔍 === DEBUG ÉTAT DU JEU ===');
+            console.log('Game ID:', currentGameId);
+            console.log('Is Host:', isHost);
+            console.log('Player ID:', currentPlayerId);
+            
+            if (currentGameId) {
+                database.ref(`games/${currentGameId}`).once('value', (snapshot) => {
+                    const gameData = snapshot.val();
+                    console.log('📊 Données du jeu:', gameData);
+                    
+                    if (gameData && gameData.players) {
+                        Object.entries(gameData.players).forEach(([playerId, player]) => {
+                            console.log(`👤 Joueur ${playerId}:`, player);
+                            if (player.answers) {
+                                console.log(`📝 Réponses:`, player.answers);
+                            }
+                        });
+                    }
+                });
+            }
+        }
+
+        function forceNextQuestion() {
+            console.log('🚀 Passage forcé à la question suivante');
+            skipQuestion();
+        }
+
         function endGameSession() {
             if (currentGameId) {
                 database.ref(`games/${currentGameId}`).remove();
@@ -1076,6 +1248,14 @@
             if (currentGameId) {
                 database.ref(`games/${currentGameId}`).off();
             }
+            
+            // Nettoyer les listeners de questions
+            questionListeners.forEach(listener => {
+                if (listener) {
+                    database.ref(`games/${currentGameId}/players`).off('value', listener);
+                }
+            });
+            questionListeners = [];
             
             if (timer) {
                 clearInterval(timer);
@@ -1123,6 +1303,11 @@
                 document.getElementById('playerNameInput').focus();
             }
         });
+
+        // Log de démarrage
+        console.log('🎮 Quiz des Capitales - Version Firebase');
+        console.log('🔥 Firebase initialisé');
+        console.log('📍 URL:', window.location.href);
     </script>
 </body>
 </html>
