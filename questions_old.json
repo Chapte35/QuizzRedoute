@@ -1,0 +1,64 @@
+{
+  "questions": [
+    {
+      "id": 1,
+      "question": "Quelle est la capitale de la France ?",
+      "options": ["Paris", "Lyon", "Marseille", "Toulouse"],
+      "correct": 0
+    },
+    {
+      "id": 2,
+      "question": "Quelle est la capitale de l'Allemagne ?",
+      "options": ["Munich", "Berlin", "Hambourg", "Cologne"],
+      "correct": 1
+    },
+    {
+      "id": 3,
+      "question": "Quelle est la capitale de l'Espagne ?",
+      "options": ["Barcelone", "Séville", "Madrid", "Valence"],
+      "correct": 2
+    },
+    {
+      "id": 4,
+      "question": "Quelle est la capitale de l'Italie ?",
+      "options": ["Milan", "Naples", "Turin", "Rome"],
+      "correct": 3
+    },
+    {
+      "id": 5,
+      "question": "Quelle est la capitale du Japon ?",
+      "options": ["Tokyo", "Osaka", "Kyoto", "Nagoya"],
+      "correct": 0
+    },
+    {
+      "id": 6,
+      "question": "Quelle est la capitale de l'Australie ?",
+      "options": ["Sydney", "Melbourne", "Canberra", "Perth"],
+      "correct": 2
+    },
+    {
+      "id": 7,
+      "question": "Quelle est la capitale du Canada ?",
+      "options": ["Toronto", "Vancouver", "Montréal", "Ottawa"],
+      "correct": 3
+    },
+    {
+      "id": 8,
+      "question": "Quelle est la capitale du Brésil ?",
+      "options": ["Rio de Janeiro", "São Paulo", "Brasília", "Salvador"],
+      "correct": 2
+    },
+    {
+      "id": 9,
+      "question": "Quelle est la capitale de l'Égypte ?",
+      "options": ["Le Caire", "Alexandrie", "Gizeh", "Louxor"],
+      "correct": 0
+    },
+    {
+      "id": 10,
+      "question": "Quelle est la capitale de l'Inde ?",
+      "options": ["Mumbai", "Calcutta", "Bangalore", "New Delhi"],
+      "correct": 3
+    }
+  ]
+}
